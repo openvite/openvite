@@ -132,9 +132,7 @@ jobs:
         project:
           - pages-router
           - app-router
-          - cloudflare-pages-router
           - pages-router-prod
-          - cloudflare-workers
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
