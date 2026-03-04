@@ -80,6 +80,8 @@ jobs:
       - name: Publish (OIDC trusted publishing)
         working-directory: packages/openvite
         run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Tag release
         run: |

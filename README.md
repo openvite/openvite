@@ -1,8 +1,12 @@
 # openvite
 
+[![npm version](https://img.shields.io/npm/v/openvite.svg)](https://www.npmjs.com/package/openvite)
+[![CI](https://github.com/openvite/openvite/actions/workflows/ci.yml/badge.svg)](https://github.com/openvite/openvite/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 The Next.js API surface, reimplemented on Vite.
 
-> 🚧 **Experimental — under heavy development.** There will be bugs, rough edges, and things that don't work. Use at your own risk.
+> **Experimental — under heavy development.** There will be bugs, rough edges, and things that don't work. Use at your own risk.
 
 ## Quick start
 
@@ -68,9 +72,7 @@ Options: `-p / --port <port>`, `-H / --hostname <host>`, `--turbopack` (accepted
 
 ### Starting a new openvite project
 
-Run `npm create next-app@latest` to create a new Next.js project, and then follow these instructions to migrate it to openvite.
-
-In the future, we will havre a proper `npm create openvite` new project workflow. 
+Run `npm create next-app@latest` to create a new Next.js project, then follow the instructions above to migrate it to openvite.
 
 ### Migrating an existing Next.js project
 
@@ -135,7 +137,7 @@ You can, with caution. This is experimental software with known bugs. It works w
 Yes. Next.js supports [self-hosting](https://nextjs.org/docs/app/building-your-application/deploying#self-hosting) on Node.js servers, Docker containers, and static exports. If you're happy with the Next.js toolchain and just want to run it somewhere other than Vercel, self-hosting is the simplest path.
 
 **How are you verifying this works?**
-The test suite has over 1,700 Vitest tests and 380 Playwright E2E tests. This includes tests ported directly from the [Next.js test suite](https://github.com/vercel/next.js/tree/canary/test) and [OpenNext's Cloudflare conformance suite](https://github.com/opennextjs/opennextjs-cloudflare), covering routing, SSR, RSC, server actions, caching, metadata, middleware, streaming, and more. Vercel's [App Router Playground](https://github.com/vercel/next-app-router-playground) also runs on openvite as an integration test. See the [Tests](#tests) section and `tests/nextjs-compat/TRACKING.md` for details.
+The test suite has over 2,100 Vitest tests and 380 Playwright E2E tests. This includes tests ported directly from the [Next.js test suite](https://github.com/vercel/next.js/tree/canary/test) and [OpenNext's Cloudflare conformance suite](https://github.com/opennextjs/opennextjs-cloudflare), covering routing, SSR, RSC, server actions, caching, metadata, middleware, streaming, and more. Vercel's [App Router Playground](https://github.com/vercel/next-app-router-playground) also runs on openvite as an integration test. See the [Tests](#tests) section and `tests/nextjs-compat/TRACKING.md` for details.
 
 **Who is reviewing this code?**
 Mostly nobody. This is an experiment in seeing how far AI-driven development can go. The test suite is the primary quality gate — not human code review. Contributions and code review are welcome.
@@ -259,7 +261,7 @@ export default defineConfig({
 });
 ```
 
-See the [examples](#live-examples) for complete working configurations.
+See the [examples](#examples) for complete working configurations.
 
 ### Other platforms (via Nitro)
 
@@ -370,84 +372,84 @@ See the [Nitro deployment docs](https://v3.nitro.build/deploy) for the full list
 
 ~94% of the Next.js 16 API surface has full or partial support. The remaining gaps are intentional stubs for deprecated features and Partial Prerendering (which Next.js 16 reworked into `"use cache"` — that directive is fully supported).
 
-> ✅ = full implementation | 🟡 = partial (runtime behavior correct, some build-time optimizations missing) | ⬜ = intentional stub/no-op
+> Full = complete implementation | Partial = runtime behavior correct, some build-time optimizations missing | Stub = intentional no-op
 
 ### Module shims
 
 Every `next/*` import is shimmed to a Vite-compatible implementation.
 
-| Module | | Notes |
-|--------|---|-------|
-| `next/link` | ✅ | All props including `prefetch` (IntersectionObserver), `onNavigate`, scroll restoration, `basePath`, `locale` |
-| `next/image` | 🟡 | Remote images via [@unpic/react](https://unpic.pics) (28 CDNs). Local images via `<img>` + srcSet. No build-time optimization/resizing |
-| `next/head` | ✅ | SSR collection + client-side DOM manipulation |
-| `next/router` | ✅ | `useRouter`, `Router` singleton, events, client-side navigation, SSR context, i18n |
-| `next/navigation` | ✅ | `usePathname`, `useSearchParams`, `useParams`, `useRouter`, `redirect`, `notFound`, `forbidden`, `unauthorized` |
-| `next/server` | ✅ | `NextRequest`, `NextResponse`, `NextURL`, cookies, `userAgent`, `after`, `connection`, `URLPattern` |
-| `next/headers` | ✅ | Async `headers()`, `cookies()`, `draftMode()` |
-| `next/dynamic` | ✅ | `ssr: true`, `ssr: false`, `loading` component |
-| `next/script` | ✅ | All 4 strategies (`beforeInteractive`, `afterInteractive`, `lazyOnload`, `worker`) |
-| `next/font/google` | 🟡 | Runtime CDN loading. No self-hosting, font subsetting, or fallback metrics |
-| `next/font/local` | 🟡 | Runtime `@font-face` injection. Not extracted at build time |
-| `next/og` | ✅ | OG image generation via `@vercel/og` (Satori + resvg) |
-| `next/cache` | ✅ | `revalidateTag`, `revalidatePath`, `unstable_cache`, pluggable `CacheHandler`, `"use cache"` with `cacheLife()` and `cacheTag()` |
-| `next/form` | ✅ | GET form interception + POST server action delegation |
-| `next/legacy/image` | ✅ | Translates legacy props to modern Image |
-| `next/error` | ✅ | Default error page component |
-| `next/config` | ✅ | `getConfig` / `setConfig` |
-| `next/document` | ✅ | `Html`, `Head`, `Main`, `NextScript` |
-| `next/constants` | ✅ | All phase constants |
-| `next/amp` | ⬜ | No-op (AMP is deprecated) |
-| `next/web-vitals` | ⬜ | No-op (use the `web-vitals` library directly) |
+| Module | Status | Notes |
+|--------|--------|-------|
+| `next/link` | Full | All props including `prefetch` (IntersectionObserver), `onNavigate`, scroll restoration, `basePath`, `locale` |
+| `next/image` | Partial | Remote images via [@unpic/react](https://unpic.pics) (28 CDNs). Local images via `<img>` + srcSet. No build-time optimization/resizing |
+| `next/head` | Full | SSR collection + client-side DOM manipulation |
+| `next/router` | Full | `useRouter`, `Router` singleton, events, client-side navigation, SSR context, i18n |
+| `next/navigation` | Full | `usePathname`, `useSearchParams`, `useParams`, `useRouter`, `redirect`, `notFound`, `forbidden`, `unauthorized` |
+| `next/server` | Full | `NextRequest`, `NextResponse`, `NextURL`, cookies, `userAgent`, `after`, `connection`, `URLPattern` |
+| `next/headers` | Full | Async `headers()`, `cookies()`, `draftMode()` |
+| `next/dynamic` | Full | `ssr: true`, `ssr: false`, `loading` component |
+| `next/script` | Full | All 4 strategies (`beforeInteractive`, `afterInteractive`, `lazyOnload`, `worker`) |
+| `next/font/google` | Partial | Runtime CDN loading. No self-hosting, font subsetting, or fallback metrics |
+| `next/font/local` | Partial | Runtime `@font-face` injection. Not extracted at build time |
+| `next/og` | Full | OG image generation via `@vercel/og` (Satori + resvg) |
+| `next/cache` | Full | `revalidateTag`, `revalidatePath`, `unstable_cache`, pluggable `CacheHandler`, `"use cache"` with `cacheLife()` and `cacheTag()` |
+| `next/form` | Full | GET form interception + POST server action delegation |
+| `next/legacy/image` | Full | Translates legacy props to modern Image |
+| `next/error` | Full | Default error page component |
+| `next/config` | Full | `getConfig` / `setConfig` |
+| `next/document` | Full | `Html`, `Head`, `Main`, `NextScript` |
+| `next/constants` | Full | All phase constants |
+| `next/amp` | Stub | No-op (AMP is deprecated) |
+| `next/web-vitals` | Stub | No-op (use the `web-vitals` library directly) |
 
 ### Routing
 
-| Feature | | Notes |
-|---------|---|-------|
-| File-system routing (`pages/`) | ✅ | Automatic scanning with hot-reload on file changes |
-| File-system routing (`app/`) | ✅ | Pages, routes, layouts, templates, loading, error, not-found, forbidden, unauthorized |
-| Dynamic routes `[param]` | ✅ | Both routers |
-| Catch-all `[...slug]` | ✅ | Both routers |
-| Optional catch-all `[[...slug]]` | ✅ | Both routers |
-| Route groups `(group)` | ✅ | URL-transparent, layouts still apply |
-| Parallel routes `@slot` | ✅ | Discovery, layout props, `default.tsx`, inherited slots |
-| Intercepting routes | ✅ | `(.)`, `(..)`, `(..)(..)`, `(...)` conventions |
-| Route handlers (`route.ts`) | ✅ | Named HTTP methods, auto OPTIONS/HEAD, cookie attachment |
-| Middleware | ✅ | `middleware.ts` and `proxy.ts` (Next.js 16). Matcher patterns (string, array, regex, `:param`, `:path*`, `:path+`) |
-| i18n routing | 🟡 | Pages Router locale prefix, Accept-Language detection, NEXT_LOCALE cookie. No domain-based routing |
-| `basePath` | ✅ | Applied everywhere — URLs, Link, Router, navigation hooks |
-| `trailingSlash` | ✅ | 308 redirects to canonical form |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| File-system routing (`pages/`) | Full | Automatic scanning with hot-reload on file changes |
+| File-system routing (`app/`) | Full | Pages, routes, layouts, templates, loading, error, not-found, forbidden, unauthorized |
+| Dynamic routes `[param]` | Full | Both routers |
+| Catch-all `[...slug]` | Full | Both routers |
+| Optional catch-all `[[...slug]]` | Full | Both routers |
+| Route groups `(group)` | Full | URL-transparent, layouts still apply |
+| Parallel routes `@slot` | Full | Discovery, layout props, `default.tsx`, inherited slots |
+| Intercepting routes | Full | `(.)`, `(..)`, `(..)(..)`, `(...)` conventions |
+| Route handlers (`route.ts`) | Full | Named HTTP methods, auto OPTIONS/HEAD, cookie attachment |
+| Middleware | Full | `middleware.ts` and `proxy.ts` (Next.js 16). Matcher patterns (string, array, regex, `:param`, `:path*`, `:path+`) |
+| i18n routing | Partial | Pages Router locale prefix, Accept-Language detection, NEXT_LOCALE cookie. No domain-based routing |
+| `basePath` | Full | Applied everywhere — URLs, Link, Router, navigation hooks |
+| `trailingSlash` | Full | 308 redirects to canonical form |
 
 ### Server features
 
-| Feature | | Notes |
-|---------|---|-------|
-| SSR (Pages Router) | ✅ | Streaming, `_app`/`_document`, `__NEXT_DATA__`, hydration |
-| SSR (App Router) | ✅ | RSC pipeline, nested layouts, streaming, nav context for client components |
-| `getStaticProps` | ✅ | Props, redirect, notFound, revalidate |
-| `getStaticPaths` | ✅ | `fallback: false`, `true`, `"blocking"` |
-| `getServerSideProps` | ✅ | Full context including locale |
-| ISR | ✅ | Stale-while-revalidate, pluggable `CacheHandler`, background regeneration |
-| Server Actions (`"use server"`) | ✅ | Action execution, FormData, re-render after mutation, `redirect()` in actions |
-| React Server Components | ✅ | Via `@vitejs/plugin-rsc`. `"use client"` boundaries work correctly |
-| Streaming SSR | ✅ | Both routers |
-| Metadata API | ✅ | `metadata`, `generateMetadata`, `viewport`, `generateViewport`, title templates |
-| `generateStaticParams` | ✅ | With `dynamicParams` enforcement |
-| Metadata file routes | ✅ | sitemap.xml, robots.txt, manifest, favicon, OG images (static + dynamic) |
-| Static export (`output: 'export'`) | ✅ | Generates static HTML/JSON for all routes |
-| `connection()` | ✅ | Forces dynamic rendering |
-| `"use cache"` directive | ✅ | File-level and function-level. `cacheLife()` profiles, `cacheTag()`, stale-while-revalidate |
-| `instrumentation.ts` | ✅ | `register()` and `onRequestError()` callbacks |
-| Route segment config | 🟡 | `revalidate`, `dynamic`, `dynamicParams`. `runtime` and `preferredRegion` are ignored |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| SSR (Pages Router) | Full | Streaming, `_app`/`_document`, `__NEXT_DATA__`, hydration |
+| SSR (App Router) | Full | RSC pipeline, nested layouts, streaming, nav context for client components |
+| `getStaticProps` | Full | Props, redirect, notFound, revalidate |
+| `getStaticPaths` | Full | `fallback: false`, `true`, `"blocking"` |
+| `getServerSideProps` | Full | Full context including locale |
+| ISR | Full | Stale-while-revalidate, pluggable `CacheHandler`, background regeneration |
+| Server Actions (`"use server"`) | Full | Action execution, FormData, re-render after mutation, `redirect()` in actions |
+| React Server Components | Full | Via `@vitejs/plugin-rsc`. `"use client"` boundaries work correctly |
+| Streaming SSR | Full | Both routers |
+| Metadata API | Full | `metadata`, `generateMetadata`, `viewport`, `generateViewport`, title templates |
+| `generateStaticParams` | Full | With `dynamicParams` enforcement |
+| Metadata file routes | Full | sitemap.xml, robots.txt, manifest, favicon, OG images (static + dynamic) |
+| Static export (`output: 'export'`) | Full | Generates static HTML/JSON for all routes |
+| `connection()` | Full | Forces dynamic rendering |
+| `"use cache"` directive | Full | File-level and function-level. `cacheLife()` profiles, `cacheTag()`, stale-while-revalidate |
+| `instrumentation.ts` | Full | `register()` and `onRequestError()` callbacks |
+| Route segment config | Partial | `revalidate`, `dynamic`, `dynamicParams`. `runtime` and `preferredRegion` are ignored |
 
 ### Configuration
 
-| Feature | | Notes |
-|---------|---|-------|
-| `next.config.js` / `.ts` / `.mjs` | ✅ | Function configs, phase argument |
-| `rewrites` / `redirects` / `headers` | ✅ | All phases, param interpolation |
-| Environment variables (`.env*`, `NEXT_PUBLIC_*`) | ✅ | Auto-loads Next.js-style dotenv files; only public vars are inlined |
-| `images` config | 🟡 | Parsed but not used for optimization |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| `next.config.js` / `.ts` / `.mjs` | Full | Function configs, phase argument |
+| `rewrites` / `redirects` / `headers` | Full | All phases, param interpolation |
+| Environment variables (`.env*`, `NEXT_PUBLIC_*`) | Full | Auto-loads Next.js-style dotenv files; only public vars are inlined |
+| `images` config | Partial | Parsed but not used for optimization |
 
 ### Environment variable loading (`.env*`)
 
@@ -542,84 +544,100 @@ Reproduce with `node benchmarks/run.mjs --runs=5 --dev-runs=10`. Exact framework
 
 ## Architecture
 
-openvite is a Vite plugin that:
+openvite follows a hexagonal (ports & adapters) architecture:
 
-1. **Resolves all `next/*` imports** to local shim modules that reimplement the Next.js API using standard Web APIs and React primitives.
-2. **Scans your `pages/` and `app/` directories** to build a file-system router matching Next.js conventions.
-3. **Generates virtual entry modules** for the RSC, SSR, and browser environments that handle request routing, component rendering, and client hydration.
-4. **Integrates with `@vitejs/plugin-rsc`** for React Server Components — handling `"use client"` / `"use server"` directives, RSC stream serialization, and multi-environment builds.
+```
+packages/openvite/src/
+  core/                     # Domain logic
+    plugin.ts               # Orchestrator — composes all plugins
+    plugin-context.ts       # Shared state (routes, config, platform adapter)
+    types.ts                # Public types, constants, virtual module IDs
+    platform.ts             # PlatformAdapter interface (port)
+  plugins/                  # Individual Vite plugins (1 file = 1 plugin)
+    config.ts               # openvite:config — resolve structure, load next.config, aliases
+    pages-router.ts         # openvite:pages-router — HMR, file watching, dev middleware
+    google-fonts.ts         # openvite:google-fonts — transform next/font/google imports
+    local-fonts.ts          # openvite:local-fonts — transform next/font/local imports
+    image-imports.ts        # openvite:image-imports — rewrite next/image static imports
+    image-config.ts         # openvite:image-config — inject image loader config
+    og-assets.ts            # openvite:og-assets — resolve OG image assets
+    react-canary.ts         # openvite:react-canary — polyfill React canary features
+    use-cache.ts            # openvite:use-cache — transform "use cache" directives
+    platform-build.ts       # openvite:platform-build — post-build platform delegation
+  codegen/                  # Virtual module generators
+    pages-entry.ts          # Pages Router server + client entries
+    rsc-entry.ts            # App Router RSC entry
+    ssr-entry.ts            # App Router SSR entry
+    browser-entry.ts        # App Router browser entry
+  platform/                 # Platform adapters (implementations)
+    detect.ts               # Auto-detect platform from installed plugins
+    node.ts                 # Node.js adapter
+    cloudflare.ts           # Cloudflare Workers adapter
+    nitro.ts                # Nitro adapter
+  routing/                  # File-system routers
+    app-router.ts           # App Router scanner (app/ conventions)
+    pages-router.ts         # Pages Router scanner (pages/ conventions)
+  server/                   # SSR request handlers
+    dev-server.ts           # Pages Router SSR handler (dev)
+    app-dev-server.ts       # App Router SSR handler (dev)
+    prod-server.ts          # Production HTTP server with compression
+    api-handler.ts          # Pages Router API routes
+    middleware.ts            # middleware.ts / proxy.ts runner
+    isr-cache.ts            # ISR cache (stale-while-revalidate)
+    image-optimization.ts   # /_openvite/image endpoint
+    metadata-routes.ts      # File-based metadata route scanner
+    instrumentation.ts      # instrumentation.ts support
+  cloudflare/               # Cloudflare-specific
+    kv-cache-handler.ts     # KV-backed CacheHandler for ISR
+    tpr.ts                  # Traffic-aware Pre-Rendering
+  shims/                    # next/* module reimplementations (33 shims + 6 internal)
+  build/
+    static-export.ts        # output: 'export' support
+  config/
+    next-config.ts          # next.config.js loader
+    config-matchers.ts      # Rewrite/redirect matching utilities
+    dotenv.ts               # .env file loading
+  client/
+    entry.ts                # Client-side hydration entry
+  utils/
+    project.ts              # Package manager detection, ESM/CJS helpers
+    hash.ts                 # Hashing utilities
+    query.ts                # Query string utilities
 
-The result is a standard Vite application that happens to be API-compatible with Next.js.
+tests/
+  *.test.ts                 # Vitest unit + integration tests
+  nextjs-compat/            # Tests ported from Next.js test suite
+  fixtures/                 # Test apps (pages-basic, app-basic, ecosystem libs)
+  e2e/                      # Playwright E2E tests
+
+examples/                   # Deployed demo apps (see Examples above)
+```
 
 ### Pages Router flow
 
 ```
-Request → Vite dev server middleware → Route match → getServerSideProps/getStaticProps
-  → renderToReadableStream(App + Page) → HTML with __NEXT_DATA__ → Client hydration
+Request -> Vite dev server middleware -> Route match -> getServerSideProps/getStaticProps
+  -> renderToReadableStream(App + Page) -> HTML with __NEXT_DATA__ -> Client hydration
 ```
 
 ### App Router flow
 
 ```
-Request → RSC entry (Vite rsc environment) → Route match → Build layout/page tree
-  → renderToReadableStream (RSC payload) → SSR entry (Vite ssr environment)
-  → renderToReadableStream (HTML) → Client hydration from RSC stream
-```
-
-## Project structure
-
-```
-packages/openvite/
-  src/
-    index.ts              # Main plugin — resolve aliases, config, virtual modules
-    cli.ts                # openvite CLI (dev/build/start/deploy/init/check/lint)
-    check.ts              # Compatibility scanner
-    deploy.ts             # Cloudflare Workers deployment
-    init.ts               # openvite init — one-command migration for Next.js apps
-    client/
-      entry.ts            # Client-side hydration entry
-    routing/
-      pages-router.ts     # Pages Router file-system scanner
-      app-router.ts       # App Router file-system scanner
-    server/
-      dev-server.ts       # Pages Router SSR request handler
-      app-dev-server.ts   # App Router RSC entry generator
-      prod-server.ts      # Production server with compression
-      api-handler.ts      # Pages Router API routes
-      isr-cache.ts        # ISR cache layer
-      middleware.ts        # middleware.ts / proxy.ts runner
-      metadata-routes.ts  # File-based metadata route scanner
-      instrumentation.ts  # instrumentation.ts support
-    cloudflare/
-      kv-cache-handler.ts # Cloudflare KV-backed CacheHandler for ISR
-    shims/                # One file per next/* module (33 shims + 6 internal)
-    build/
-      static-export.ts    # output: 'export' support
-    utils/
-      project.ts          # Shared project utilities (ESM, CJS, package manager detection)
-    config/
-      next-config.ts      # next.config.js loader
-      config-matchers.ts  # Config matching utilities
-
-tests/
-  *.test.ts               # Vitest unit + integration tests
-  nextjs-compat/          # Tests ported from Next.js test suite
-  fixtures/               # Test apps (pages-basic, app-basic, ecosystem libs)
-  e2e/                    # Playwright E2E tests (5 projects)
-
-examples/                 # Deployed demo apps (see Live Examples above)
+Request -> RSC entry (Vite rsc environment) -> Route match -> Build layout/page tree
+  -> renderToReadableStream (RSC payload) -> SSR entry (Vite ssr environment)
+  -> renderToReadableStream (HTML) -> Client hydration from RSC stream
 ```
 
 ## Tests
 
 ```bash
-bun run test             # Vitest unit + integration tests
-bun run test:e2e     # Playwright E2E tests (5 projects)
-bun run typecheck    # TypeScript checking (tsgo)
-bun run lint         # Linting (oxlint)
+bun run test             # 2,100+ Vitest unit + integration tests
+bun run test:e2e         # 380+ Playwright E2E tests
+bun run typecheck        # TypeScript checking (tsgo)
+bun run lint             # Linting (oxlint)
 ```
 
-E2E tests cover Pages Router (dev + production), App Router (dev), and both routers on Cloudflare Workers via `wrangler dev`.
+E2E tests cover Pages Router (dev + production) and App Router (dev).
 
 The [Vercel App Router Playground](https://github.com/vercel/next-app-router-playground) runs on openvite as an integration test — see [examples/app-router-playground](examples/app-router-playground).
 
@@ -631,7 +649,7 @@ If you're working from the repo instead of installing from npm:
 git clone https://github.com/openvite/openvite.git
 cd openvite
 bun install
-bun run build
+bun run build    # esbuild (JS) + tsgo (declarations) in parallel, ~880ms
 ```
 
 This compiles the openvite package to `packages/openvite/dist/`. For active development, use `cd packages/openvite && bun run dev` to run `tsc --watch`.
@@ -653,7 +671,7 @@ Or add it to your `package.json` as a file dependency:
 }
 ```
 
-openvite has peer dependencies on `react ^19.2.4`, `react-dom ^19.2.4`, and `vite ^7.0.0`. Then replace `next` with `openvite` in your scripts and run as normal.
+openvite has peer dependencies on `react >=19.2.0`, `react-dom >=19.2.0`, and `vite ^7.0.0`. Then replace `next` with `openvite` in your scripts and run as normal.
 
 ## Contributing
 
@@ -662,8 +680,6 @@ This project is experimental and under active development. Issues and PRs are we
 ### CI
 
 When you open a PR, CI (lint, typecheck, Vitest, Playwright E2E) runs automatically. First-time contributors need one manual approval from a maintainer, then subsequent PRs run without intervention.
-
-Deploy previews only run for branches pushed to the main repo. For fork PRs, a maintainer can comment `/deploy-preview` to trigger the deploy and post preview URLs.
 
 ### Reporting bugs
 
