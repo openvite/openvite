@@ -4,7 +4,7 @@
  * Resolves project structure (app/pages dirs), loads next.config.js,
  * sets up shim aliases, detects platform, and returns the Vite config.
  */
-import type { Plugin, UserConfig, ViteDevServer } from "vite";
+import type { Plugin, UserConfig } from "vite";
 import { loadEnv } from "vite";
 import type { MutablePluginContext } from "../core/plugin-context.js";
 import type { OpenviteOptions } from "../core/types.js";
@@ -45,8 +45,7 @@ import {
 import { appRouter } from "../routing/app-router.js";
 import { scanMetadataFiles } from "../server/metadata-routes.js";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import fs from "node:fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

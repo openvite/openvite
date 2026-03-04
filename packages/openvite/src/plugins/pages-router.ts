@@ -6,7 +6,6 @@ import type { Plugin, ViteDevServer } from "vite";
 import type { PluginContext } from "../core/plugin-context.js";
 import type { RequestContext } from "../config/config-matchers.js";
 import {
-  VIRTUAL_RSC_ENTRY,
   RESOLVED_RSC_ENTRY,
 } from "../core/types.js";
 import { pagesRouter, apiRouter, invalidateRouteCache, matchRoute } from "../routing/pages-router.js";

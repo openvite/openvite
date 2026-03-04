@@ -7,7 +7,6 @@
  */
 import type { Plugin } from "vite";
 import type { PluginContext } from "../core/plugin-context.js";
-import { computeLazyChunks } from "../core/types.js";
 import path from "node:path";
 import fs from "node:fs";
 
