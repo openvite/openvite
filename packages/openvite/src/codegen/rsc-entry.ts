@@ -7,6 +7,7 @@
  * the SSR entry for HTML generation.
  */
 import fs from "node:fs";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AppRoute } from "../routing/app-router.js";
 import type { MetadataFileRoute } from "../server/metadata-routes.js";
@@ -204,6 +205,9 @@ ${slotEntries.join(",\n")}
   }`;
   });
 
+  // Compute absolute path to rsc-runtime modules for virtual module imports
+  const rscRuntimeDir = path.resolve(fileURLToPath(new URL("../rsc-runtime", import.meta.url))).replace(/\\/g, "/");
+
   return `
 import {
   renderToReadableStream,
@@ -228,6 +232,12 @@ import { runWithNavigationContext as _runWithNavigationContext } from "openvite/
 import { reportRequestError as _reportRequestError } from "openvite/instrumentation";
 import { getSSRFontLinks as _getSSRFontLinks, getSSRFontStyles as _getSSRFontStylesGoogle, getSSRFontPreloads as _getSSRFontPreloadsGoogle } from "next/font/google";
 import { getSSRFontStyles as _getSSRFontStylesLocal, getSSRFontPreloads as _getSSRFontPreloadsLocal } from "next/font/local";
+// RSC runtime modules — extracted pure utilities
+import { matchRoute, matchPattern, buildInterceptLookup, findIntercept as _findIntercept } from "${rscRuntimeDir}/route-matcher.js";
+import { makeThenableParams, sanitizeErrorForClient as __sanitizeErrorForClient, rscOnError, isExternalUrl as __isExternalUrl } from "${rscRuntimeDir}/helpers.js";
+import { validateCsrfOrigin as _validateCsrfOrigin, parseCookies as __parseCookies, sanitizeDestination } from "${rscRuntimeDir}/request-context.js";
+import { readBodyWithLimit as __readBodyWithLimit, readFormDataWithLimit as __readFormDataWithLimit, DEFAULT_MAX_ACTION_BODY_SIZE as __MAX_ACTION_BODY_SIZE } from "${rscRuntimeDir}/body-limit.js";
+import { proxyExternalRequest as __proxyExternalRequest } from "${rscRuntimeDir}/proxy.js";
 function _getSSRFontStyles() { return [..._getSSRFontStylesGoogle(), ..._getSSRFontStylesLocal()]; }
 function _getSSRFontPreloads() { return [..._getSSRFontPreloadsGoogle(), ..._getSSRFontPreloadsLocal()]; }
 
@@ -245,80 +255,7 @@ function setNavigationContext(ctx) {
 // based on export const revalidate for testing purposes.
 // Production ISR is handled by prod-server.ts and the Cloudflare worker entry.
 
-// Normalize null-prototype objects from matchPattern() into thenable objects
-// that work both as Promises (for Next.js 15+ async params) and as plain
-// objects with synchronous property access (for pre-15 code like params.id).
-//
-// matchPattern() uses Object.create(null), producing objects without
-// Object.prototype. The RSC serializer rejects these. Spreading ({...obj})
-// restores a normal prototype. Object.assign onto the Promise preserves
-// synchronous property access (params.id, params.slug) that existing
-// components and test fixtures rely on.
-function makeThenableParams(obj) {
-  const plain = { ...obj };
-  return Object.assign(Promise.resolve(plain), plain);
-}
-
-// djb2 hash — matches Next.js's stringHash for digest generation.
-// Produces a stable numeric string from error message + stack.
-function __errorDigest(str) {
-  let hash = 5381;
-  for (let i = str.length - 1; i >= 0; i--) {
-    hash = (hash * 33) ^ str.charCodeAt(i);
-  }
-  return (hash >>> 0).toString();
-}
-
-// Sanitize an error for client consumption. In production, replaces the error
-// with a generic Error that only carries a digest hash (matching Next.js
-// behavior). In development, returns the original error for debugging.
-// Navigation errors (redirect, notFound, etc.) are always passed through
-// unchanged since their digests are used for client-side routing.
-function __sanitizeErrorForClient(error) {
-  // Navigation errors must pass through with their digest intact
-  if (error && typeof error === "object" && "digest" in error) {
-    const digest = String(error.digest);
-    if (
-      digest.startsWith("NEXT_REDIRECT;") ||
-      digest === "NEXT_NOT_FOUND" ||
-      digest.startsWith("NEXT_HTTP_ERROR_FALLBACK;")
-    ) {
-      return error;
-    }
-  }
-  // In development, pass through the original error for debugging
-  if (process.env.NODE_ENV !== "production") {
-    return error;
-  }
-  // In production, create a sanitized error with only a digest hash
-  const msg = error instanceof Error ? error.message : String(error);
-  const stack = error instanceof Error ? (error.stack || "") : "";
-  const sanitized = new Error(
-    "An error occurred in the Server Components render. " +
-    "The specific message is omitted in production builds to avoid leaking sensitive details. " +
-    "A digest property is included on this error instance which may provide additional details about the nature of the error."
-  );
-  sanitized.digest = __errorDigest(msg + stack);
-  return sanitized;
-}
-
-// onError callback for renderToReadableStream — preserves the digest for
-// Next.js navigation errors (redirect, notFound, forbidden, unauthorized)
-// thrown during RSC streaming (e.g. inside Suspense boundaries).
-// For non-navigation errors in production, generates a digest hash so the
-// error can be correlated with server logs without leaking details.
-function rscOnError(error) {
-  if (error && typeof error === "object" && "digest" in error) {
-    return String(error.digest);
-  }
-  // In production, generate a digest hash for non-navigation errors
-  if (process.env.NODE_ENV === "production" && error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    const stack = error instanceof Error ? (error.stack || "") : "";
-    return __errorDigest(msg + stack);
-  }
-  return undefined;
-}
+// makeThenableParams, __sanitizeErrorForClient, rscOnError — imported from rsc-runtime/helpers
 
 ${imports.join("\n")}
 
@@ -546,80 +483,10 @@ async function renderErrorBoundaryPage(route, error, isRscRequest, request) {
   });
 }
 
-function matchRoute(url, routes) {
-  const pathname = url.split("?")[0];
-  let normalizedUrl = pathname === "/" ? "/" : pathname.replace(/\\/$/, "");
-   // NOTE: Do NOT decodeURIComponent here. The caller is responsible for decoding
-   // the pathname exactly once at the request entry point. Decoding again here
-   // would cause inconsistent path matching between middleware and routing.
-  for (const route of routes) {
-    const params = matchPattern(normalizedUrl, route.pattern);
-    if (params !== null) return { route, params };
-  }
-  return null;
-}
-
-function matchPattern(url, pattern) {
-  const urlParts = url.split("/").filter(Boolean);
-  const patternParts = pattern.split("/").filter(Boolean);
-  const params = Object.create(null);
-  for (let i = 0; i < patternParts.length; i++) {
-    const pp = patternParts[i];
-    if (pp.endsWith("+")) {
-      const paramName = pp.slice(1, -1);
-      const remaining = urlParts.slice(i);
-      if (remaining.length === 0) return null;
-      params[paramName] = remaining;
-      return params;
-    }
-    if (pp.endsWith("*")) {
-      const paramName = pp.slice(1, -1);
-      params[paramName] = urlParts.slice(i);
-      return params;
-    }
-    if (pp.startsWith(":")) {
-      if (i >= urlParts.length) return null;
-      params[pp.slice(1)] = urlParts[i];
-      continue;
-    }
-    if (i >= urlParts.length || urlParts[i] !== pp) return null;
-  }
-  if (urlParts.length !== patternParts.length) return null;
-  return params;
-}
-
-// Build a global intercepting route lookup for RSC navigation.
-// Maps target URL patterns to { sourceRouteIndex, slotName, interceptPage, params }.
-const interceptLookup = [];
-for (let ri = 0; ri < routes.length; ri++) {
-  const r = routes[ri];
-  if (!r.slots) continue;
-  for (const [slotName, slotMod] of Object.entries(r.slots)) {
-    if (!slotMod.intercepts) continue;
-    for (const intercept of slotMod.intercepts) {
-      interceptLookup.push({
-        sourceRouteIndex: ri,
-        slotName,
-        targetPattern: intercept.targetPattern,
-        page: intercept.page,
-        params: intercept.params,
-      });
-    }
-  }
-}
-
-/**
- * Check if a pathname matches any intercepting route.
- * Returns the match info or null.
- */
+// matchRoute, matchPattern, buildInterceptLookup, findIntercept — imported from rsc-runtime/route-matcher
+const interceptLookup = buildInterceptLookup(routes);
 function findIntercept(pathname) {
-  for (const entry of interceptLookup) {
-    const params = matchPattern(pathname, entry.targetPattern);
-    if (params !== null) {
-      return { ...entry, matchedParams: params };
-    }
-  }
-  return null;
+  return _findIntercept(pathname, interceptLookup);
 }
 
 async function buildPageElement(route, params, opts, searchParams) {
@@ -866,60 +733,9 @@ const __allowedOrigins = ${JSON.stringify(allowedOrigins)};
 
 ${generateDevOriginCheckCode(config?.allowedDevOrigins)}
 
-// ── CSRF origin validation for server actions ───────────────────────────
-// Matches Next.js behavior: compare the Origin header against the Host header.
-// If they don't match, the request is rejected with 403 unless the origin is
-// in the allowedOrigins list (from experimental.serverActions.allowedOrigins).
-function __isOriginAllowed(origin, allowed) {
-  for (const pattern of allowed) {
-    if (pattern.startsWith("*.")) {
-      // Wildcard: *.example.com matches sub.example.com, a.b.example.com
-      const suffix = pattern.slice(1); // ".example.com"
-      if (origin === pattern.slice(2) || origin.endsWith(suffix)) return true;
-    } else if (origin === pattern) {
-      return true;
-    }
-  }
-  return false;
-}
-
+// CSRF validation — delegates to imported validateCsrfOrigin with bound allowedOrigins
 function __validateCsrfOrigin(request) {
-  const originHeader = request.headers.get("origin");
-  // If there's no Origin header, allow the request — same-origin requests
-  // from non-fetch navigations (e.g. SSR) may lack an Origin header.
-  // The x-rsc-action custom header already provides protection against simple
-  // form-based CSRF since custom headers can't be set by cross-origin forms.
-  if (!originHeader || originHeader === "null") return null;
-
-  let originHost;
-  try {
-    originHost = new URL(originHeader).host.toLowerCase();
-  } catch {
-    return new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain" } });
-  }
-
-  // Only use the Host header for origin comparison — never trust
-  // X-Forwarded-Host here, since it can be freely set by the client
-  // and would allow the check to be bypassed if it matched a spoofed
-  // Origin. The prod server's resolveHost() handles trusted proxy
-  // scenarios separately.
-  const hostHeader = (
-    request.headers.get("host") ||
-    ""
-  ).split(",")[0].trim().toLowerCase();
-
-  if (!hostHeader) return null;
-
-  // Same origin — allow
-  if (originHost === hostHeader) return null;
-
-  // Check allowedOrigins from next.config.js
-  if (__allowedOrigins.length > 0 && __isOriginAllowed(originHost, __allowedOrigins)) return null;
-
-  console.warn(
-    \`[openvite] CSRF origin mismatch: origin "\${originHost}" does not match host "\${hostHeader}". Blocking server action request.\`
-  );
-  return new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain" } });
+  return _validateCsrfOrigin(request, __allowedOrigins);
 }
 
 // ── ReDoS-safe regex compilation ────────────────────────────────────────
@@ -972,18 +788,7 @@ function __matchConfigPattern(pathname, pattern) {
   return params;
 }
 
-function __parseCookies(cookieHeader) {
-  if (!cookieHeader) return {};
-  const cookies = {};
-  for (const part of cookieHeader.split(";")) {
-    const eq = part.indexOf("=");
-    if (eq === -1) continue;
-    const key = part.slice(0, eq).trim();
-    const value = part.slice(eq + 1).trim();
-    if (key) cookies[key] = value;
-  }
-  return cookies;
-}
+// __parseCookies — imported from rsc-runtime/request-context
 
 function __checkSingleCondition(condition, ctx) {
   switch (condition.type) {
@@ -1063,109 +868,10 @@ function __applyConfigRewrites(pathname, rules, ctx) {
   return null;
 }
 
-function __isExternalUrl(url) {
-  return /^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith("//");
-}
+// __isExternalUrl — imported from rsc-runtime/helpers
 
-/**
- * Maximum server-action request body size (1 MB).
- * Matches the Next.js default for serverActions.bodySizeLimit.
- * @see https://nextjs.org/docs/app/api-reference/config/next-config-js/serverActions#bodysizelimit
- * Prevents unbounded request body buffering.
- */
-var __MAX_ACTION_BODY_SIZE = 1 * 1024 * 1024;
-
-/**
- * Read a request body as text with a size limit.
- * Enforces the limit on the actual byte stream to prevent bypasses
- * via chunked transfer-encoding where Content-Length is absent or spoofed.
- */
-async function __readBodyWithLimit(request, maxBytes) {
-  if (!request.body) return "";
-  var reader = request.body.getReader();
-  var decoder = new TextDecoder();
-  var chunks = [];
-  var totalSize = 0;
-  for (;;) {
-    var result = await reader.read();
-    if (result.done) break;
-    totalSize += result.value.byteLength;
-    if (totalSize > maxBytes) {
-      reader.cancel();
-      throw new Error("Request body too large");
-    }
-    chunks.push(decoder.decode(result.value, { stream: true }));
-  }
-  chunks.push(decoder.decode());
-  return chunks.join("");
-}
-
-/**
- * Read a request body as FormData with a size limit.
- * Consumes the body stream with a byte counter and then parses the
- * collected bytes as multipart form data via the Response constructor.
- */
-async function __readFormDataWithLimit(request, maxBytes) {
-  if (!request.body) return new FormData();
-  var reader = request.body.getReader();
-  var chunks = [];
-  var totalSize = 0;
-  for (;;) {
-    var result = await reader.read();
-    if (result.done) break;
-    totalSize += result.value.byteLength;
-    if (totalSize > maxBytes) {
-      reader.cancel();
-      throw new Error("Request body too large");
-    }
-    chunks.push(result.value);
-  }
-  // Reconstruct a Response with the original Content-Type so that
-  // the FormData parser can handle multipart boundaries correctly.
-  var combined = new Uint8Array(totalSize);
-  var offset = 0;
-  for (var chunk of chunks) {
-    combined.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  var contentType = request.headers.get("content-type") || "";
-  return new Response(combined, { headers: { "Content-Type": contentType } }).formData();
-}
-
-const __hopByHopHeaders = new Set(["connection","keep-alive","proxy-authenticate","proxy-authorization","te","trailers","transfer-encoding","upgrade"]);
-
-async function __proxyExternalRequest(request, externalUrl) {
-  const originalUrl = new URL(request.url);
-  const targetUrl = new URL(externalUrl);
-  for (const [key, value] of originalUrl.searchParams) {
-    if (!targetUrl.searchParams.has(key)) targetUrl.searchParams.set(key, value);
-  }
-  const headers = new Headers(request.headers);
-  headers.set("host", targetUrl.host);
-  headers.delete("connection");
-  // Strip credentials and internal headers to prevent leaking auth tokens,
-  // session cookies, and middleware internals to third-party origins.
-  headers.delete("cookie");
-  headers.delete("authorization");
-  headers.delete("x-api-key");
-  headers.delete("proxy-authorization");
-  for (const key of [...headers.keys()]) {
-    if (key.startsWith("x-middleware-")) headers.delete(key);
-  }
-  const method = request.method;
-  const hasBody = method !== "GET" && method !== "HEAD";
-  const init = { method, headers, redirect: "manual", signal: AbortSignal.timeout(30000) };
-  if (hasBody && request.body) { init.body = request.body; init.duplex = "half"; }
-  let upstream;
-  try { upstream = await fetch(targetUrl.href, init); }
-  catch (e) {
-    if (e && e.name === "TimeoutError") return new Response("Gateway Timeout", { status: 504 });
-    console.error("[openvite] External rewrite proxy error:", e); return new Response("Bad Gateway", { status: 502 });
-  }
-  const respHeaders = new Headers();
-  upstream.headers.forEach(function(value, key) { if (!__hopByHopHeaders.has(key.toLowerCase())) respHeaders.append(key, value); });
-  return new Response(upstream.body, { status: upstream.status, statusText: upstream.statusText, headers: respHeaders });
-}
+// __MAX_ACTION_BODY_SIZE, __readBodyWithLimit, __readFormDataWithLimit — imported from rsc-runtime/body-limit
+// __proxyExternalRequest — imported from rsc-runtime/proxy
 
 function __applyConfigHeaders(pathname, ctx) {
   const result = [];
