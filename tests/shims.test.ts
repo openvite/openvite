@@ -2072,34 +2072,17 @@ describe("double-encoded path handling in middleware", () => {
     expect(matchPattern(normalized, "/dashboard")).toBe(false);
   });
 
-  it("matchRoute in generated code does not double-decode pathnames", async () => {
-    // Verify that matchRoute no longer calls decodeURIComponent internally.
-    // The generated RSC entry code is a string — we check it directly.
-    const { generateRscEntry } = await import(
-      "../packages/openvite/src/server/app-dev-server.js"
+  it("matchRoute does not double-decode pathnames", async () => {
+    // matchRoute was extracted to rsc-runtime/route-matcher.ts — verify
+    // it does not call decodeURIComponent internally.
+    const { readFileSync } = await import("fs");
+    const { resolve } = await import("path");
+    const source = readFileSync(
+      resolve("packages/openvite/src/rsc-runtime/route-matcher.ts"),
+      "utf-8",
     );
-    const code = generateRscEntry("/tmp/app", [
-      {
-        pattern: "/dashboard",
-        isDynamic: false,
-        params: [],
-        pagePath: null,
-        routePath: null,
-        layouts: [],
-        layoutSegmentDepths: [],
-        templates: [],
-        loadingPath: null,
-        errorPath: null,
-        layoutErrorPaths: [],
-        notFoundPath: null,
-        notFoundPaths: [],
-        forbiddenPath: null,
-        unauthorizedPath: null,
-        parallelSlots: [],
-      },
-    ]);
-    // Extract the matchRoute function from generated code
-    const matchRouteMatch = code.match(/function matchRoute\(url, routes\) \{[\s\S]*?\n\}/);
+    // Extract the matchRoute function body
+    const matchRouteMatch = source.match(/export function matchRoute\([\s\S]*?\n\}/);
     expect(matchRouteMatch).toBeTruthy();
     const matchRouteCode = matchRouteMatch![0];
     // Verify it does NOT call decodeURIComponent (the comment mentions it but
