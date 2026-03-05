@@ -84,9 +84,10 @@ jobs:
           PUBLISH_DIR="${{ runner.temp }}/publish"
           mkdir -p "$PUBLISH_DIR"
           cp -r packages/openvite/dist "$PUBLISH_DIR/dist"
-          cp packages/openvite/package.json "$PUBLISH_DIR/package.json"
-          cp packages/openvite/README.md "$PUBLISH_DIR/README.md" 2>/dev/null || true
-          cp packages/openvite/LICENSE "$PUBLISH_DIR/LICENSE" 2>/dev/null || true
+          # Copy package.json and strip prepack script (it assumes monorepo paths)
+          jq 'del(.scripts.prepack)' packages/openvite/package.json > "$PUBLISH_DIR/package.json"
+          cp README.md "$PUBLISH_DIR/README.md"
+          cp LICENSE "$PUBLISH_DIR/LICENSE"
           cd "$PUBLISH_DIR"
           npm publish --access public --provenance
         env:
