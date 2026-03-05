@@ -79,7 +79,9 @@ jobs:
 
       - name: Publish (OIDC trusted publishing)
         working-directory: packages/openvite
-        run: npm publish --access public --provenance
+        run: |
+          TARBALL=$(npm pack --pack-destination "${{ runner.temp }}" 2>/dev/null | tail -1)
+          npm publish "${{ runner.temp }}/$TARBALL" --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
