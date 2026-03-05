@@ -72,7 +72,8 @@ jobs:
           esac
 
           VERSION="${MAJOR}.${MINOR}.${PATCH}"
-          npm version "$VERSION" --no-git-tag-version
+          # Use jq instead of npm version to avoid workspace: protocol errors
+          jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Publishing openvite@${VERSION} (was ${LATEST})"
           echo "previous=${LATEST}" >> "$GITHUB_OUTPUT"
