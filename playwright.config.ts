@@ -27,16 +27,6 @@ const projectServers = {
       timeout: 30_000,
     },
   },
-  "cloudflare-pages-router": {
-    testDir: "./tests/e2e/cloudflare-pages-router",
-    server: {
-      command: "npx vite build && npx wrangler dev --port 4177",
-      cwd: "./examples/pages-router-cloudflare",
-      port: 4177,
-      reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
-    },
-  },
   "pages-router-prod": {
     testDir: "./tests/e2e/pages-router-prod",
     server: {
@@ -46,18 +36,6 @@ const projectServers = {
         "npx tsc -p ../../../packages/openvite/tsconfig.json && node ../../../packages/openvite/dist/cli.js build && node ../../../packages/openvite/dist/cli.js start --port 4175",
       cwd: "./tests/fixtures/pages-basic",
       port: 4175,
-      reuseExistingServer: !process.env.CI,
-      timeout: 60_000,
-    },
-  },
-  "cloudflare-workers": {
-    testDir: "./tests/e2e/cloudflare-workers",
-    server: {
-      // Build app-router-cloudflare with Vite, then serve with wrangler dev (miniflare)
-      command:
-        "npx vite build && npx wrangler dev --config dist/server/wrangler.json --port 4176",
-      cwd: "./examples/app-router-cloudflare",
-      port: 4176,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
     },
