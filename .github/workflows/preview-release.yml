@@ -19,4 +19,6 @@ jobs:
           node-version: 24
       - run: bun install --frozen-lockfile
       - run: bun run build
-      - run: bunx pkg-pr-new publish './packages/openvite'
+      - name: Publish preview
+        run: bunx pkg-pr-new publish './packages/openvite'
+        continue-on-error: true
