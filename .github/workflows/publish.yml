@@ -78,10 +78,16 @@ jobs:
           echo "previous=${LATEST}" >> "$GITHUB_OUTPUT"
 
       - name: Publish (OIDC trusted publishing)
-        working-directory: packages/openvite
         run: |
-          TARBALL=$(npm pack --pack-destination "${{ runner.temp }}" 2>/dev/null | tail -1)
-          npm publish "${{ runner.temp }}/$TARBALL" --access public --provenance
+          # Copy built package to isolated temp dir to avoid workspace: protocol errors
+          PUBLISH_DIR="${{ runner.temp }}/publish"
+          mkdir -p "$PUBLISH_DIR"
+          cp -r packages/openvite/dist "$PUBLISH_DIR/dist"
+          cp packages/openvite/package.json "$PUBLISH_DIR/package.json"
+          cp packages/openvite/README.md "$PUBLISH_DIR/README.md" 2>/dev/null || true
+          cp packages/openvite/LICENSE "$PUBLISH_DIR/LICENSE" 2>/dev/null || true
+          cd "$PUBLISH_DIR"
+          npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
