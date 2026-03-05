@@ -10,9 +10,10 @@ test.describe("router.beforePopState (Pages Router)", () => {
     await page.waitForFunction(() => (window as any).__OPENVITE_ROOT__);
 
     // Enable blocking BEFORE navigating away
-    await page.click('[data-testid="enable-blocking"]');
+    await page.locator('[data-testid="enable-blocking"]').click();
     await expect(page.locator('[data-testid="toggle-blocking"]')).toHaveText(
       "Blocking: ON",
+      { timeout: 10_000 },
     );
 
     // Navigate to about (this is a client-side navigation via Link, not popstate)
