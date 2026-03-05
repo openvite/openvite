@@ -44,7 +44,7 @@ export async function proxyExternalRequest(
   headers.delete("authorization");
   headers.delete("x-api-key");
   headers.delete("proxy-authorization");
-  for (const key of [...headers.keys()]) {
+  for (const key of Array.from(headers.keys())) {
     if (key.startsWith("x-middleware-")) headers.delete(key);
   }
 

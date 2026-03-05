@@ -28,6 +28,8 @@ export {
   isExternalUrl,
 } from "./helpers.js";
 
+export { buildPageElement } from "./page-builder.js";
+
 export { proxyExternalRequest } from "./proxy.js";
 
 export {
@@ -36,6 +38,8 @@ export {
   parseCookies,
   sanitizeDestination,
 } from "./request-context.js";
+
+export { executeRouteHandler } from "./route-handler.js";
 
 export {
   matchRoute,
