@@ -1199,33 +1199,38 @@ export default async function handler(request) {
   // ALS scope that propagates through all async continuations (including RSC
   // streaming), preventing state leakage between concurrent requests on
   // Cloudflare Workers and other concurrent runtimes.
-  const headersCtx = headersContextFromRequest(request);
-  return runWithHeadersContext(headersCtx, () =>
-    _runWithNavigationContext(() =>
-      _runWithCacheState(() =>
-        _runWithPrivateCache(() =>
-          runWithFetchCache(async () => {
-            const __reqCtx = __buildRequestContext(request);
-            const response = await _handleRequest(request, __reqCtx);
-            // Apply custom headers from next.config.js to non-redirect responses.
-            // Skip redirects (3xx) because Response.redirect() creates immutable headers,
-            // and Next.js doesn't apply custom headers to redirects anyway.
-            if (__configHeaders.length && response && response.headers && !(response.status >= 300 && response.status < 400)) {
-              const url = new URL(request.url);
-              let pathname;
-              try { pathname = __normalizePath(decodeURIComponent(url.pathname)); } catch { pathname = url.pathname; }
-              ${bp ? `if (pathname.startsWith(${JSON.stringify(bp)})) pathname = pathname.slice(${JSON.stringify(bp)}.length) || "/";` : ""}
-              const extraHeaders = __applyConfigHeaders(pathname, __reqCtx);
-              for (const h of extraHeaders) {
-                response.headers.set(h.key, h.value);
+  try {
+    const headersCtx = headersContextFromRequest(request);
+    return await runWithHeadersContext(headersCtx, () =>
+      _runWithNavigationContext(() =>
+        _runWithCacheState(() =>
+          _runWithPrivateCache(() =>
+            runWithFetchCache(async () => {
+              const __reqCtx = __buildRequestContext(request);
+              const response = await _handleRequest(request, __reqCtx);
+              // Apply custom headers from next.config.js to non-redirect responses.
+              // Skip redirects (3xx) because Response.redirect() creates immutable headers,
+              // and Next.js doesn't apply custom headers to redirects anyway.
+              if (__configHeaders.length && response && response.headers && !(response.status >= 300 && response.status < 400)) {
+                const url = new URL(request.url);
+                let pathname;
+                try { pathname = __normalizePath(decodeURIComponent(url.pathname)); } catch { pathname = url.pathname; }
+                ${bp ? `if (pathname.startsWith(${JSON.stringify(bp)})) pathname = pathname.slice(${JSON.stringify(bp)}.length) || "/";` : ""}
+                const extraHeaders = __applyConfigHeaders(pathname, __reqCtx);
+                for (const h of extraHeaders) {
+                  response.headers.set(h.key, h.value);
+                }
               }
-            }
-            return response;
-          })
+              return response;
+            })
+          )
         )
       )
-    )
-  );
+    );
+  } catch (err) {
+    console.error("[openvite] Unhandled request error:", err);
+    return new Response("Internal Server Error", { status: 500 });
+  }
 }
 
 async function _handleRequest(request, __reqCtx) {

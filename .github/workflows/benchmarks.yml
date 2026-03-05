@@ -70,9 +70,10 @@ jobs:
 
       # Upload results to the benchmarks dashboard
       - name: Upload to dashboard
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.BENCHMARK_UPLOAD_URL != ''
         env:
           BENCHMARK_UPLOAD_TOKEN: ${{ secrets.BENCHMARK_UPLOAD_TOKEN }}
+          BENCHMARK_UPLOAD_URL: ${{ secrets.BENCHMARK_UPLOAD_URL }}
         run: |
           RESULTS_FILE="${{ steps.results.outputs.file }}"
           COMMIT_SHA="${{ github.sha }}"
